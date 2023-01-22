@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nocamel"
+authors = [{name="Matt Manes"}]
+description = "Convert a python file from camel case to PEP compliant style."
+version = "0.0.1"
+requires-python = ">=3.6"
+dependencies = []
+readme = "README.md"
+keywords = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/matt-manes/nocamel"
+"Documentation" = "https://github.com/matt-manes/nocamel/tree/main/docs"
+"Source code" = "https://github.com/matt-manes/nocamel/tree/main/src/nocamel"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+pythonpath = "src"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    ".coverage",
+    ".pytest_cache",
+    ".vscode",
+    "tests"
+]
+[project.scripts]
+nocamel = "nocamel.nocamel:main"
