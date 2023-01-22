@@ -33,7 +33,7 @@ from pathlib import Path
 
 def get_args() -&gt; argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument(&#34;files_to_convert&#34;, type=str)
+    parser.add_argument(&#34;source_to_convert&#34;, type=str)
 
     parser.add_argument(
         &#34;-ef&#34;,
@@ -51,61 +51,85 @@ def get_args() -&gt; argparse.Namespace:
         help=&#34;&#34;&#34; Change module import names to lower case. &#34;&#34;&#34;,
     )
 
-    parser.add_argument(&#34;-cfn&#34;, &#34;--convert_file_name&#34;, action=&#34;store_true&#34;)
+    parser.add_argument(
+        &#34;-cfn&#34;,
+        &#34;--convert_file_name&#34;,
+        action=&#34;store_true&#34;,
+        help=&#34;&#34;&#34; Convert the file name to snake case and delete the origninal. &#34;&#34;&#34;,
+    )
 
     args = parser.parse_args()
-    args.files_to_convert: Path = Path(args.files_to_convert)
+    args.source_to_convert: Path = Path(args.source_to_convert)
+    if args.source_to_convert.is_dir():
+        args.file_to_convert = args.source_to_convert.rglob(&#34;*.py&#34;)
     args.extra_files: list[Path] = [Path(file) for file in args.extra_files]
 
     return args
 
 
 def convert_string(camel_string: str) -&gt; str:
-    return &#34;&#34;.join(f&#34;_{ch.lower()}&#34; if ch.isupper() else ch for ch in camel_string)
+    &#34;&#34;&#34;Converts a camel case string to a PEP compliant snake case string.&#34;&#34;&#34;
+    snake_string = &#34;&#34;
+    for i, ch in enumerate(camel_string):
+        if (
+            0 &lt; i &lt; (len(camel_string) - 1)
+            and ch.isupper()
+            and camel_string[i - 1].islower()
+        ):
+            if camel_string[i + 1].isupper():
+                snake_string += f&#34;_{ch}&#34;
+            else:
+                snake_string += f&#34;_{ch.lower()}&#34;
+        else:
+            snake_string += ch
+    return snake_string
 
 
-def main():
-    args = get_args()
-    if args.files_to_convert.is_file():
-        files_to_convert: list[Path] = [args.files_to_convert]
-    else:
-        files_to_convert: list[Path] = list(args.files_to_convert.iterdir())
-    for file in files_to_convert:
+def main(args: argparse.Namespace = None):
+    if not args:
+        args = get_args()
+    for file in args.source_to_convert:
         content = file.read_text()
         names = []
         modules = []
         with file.open(&#34;r&#34;) as f:
-            for token in tokenize.generate_tokens(f.readline):
-                if token.type == 1:
-                    if (
-                        &#34;import&#34; in token.line
-                        and token.line.split()[1].strip(&#34;\n&#34;).strip(&#34;.&#34;) == token.string
-                    ):
-                        modules.append(token.string)
-                    elif token.string not in modules:
-                        names.append(token.string)
-            names = list(set(names))
-
-        for name in names:
-            if not name[0].isupper():
-                converted_name = convert_string(name)
-                content = content.replace(name, converted_name)
-                for extra in args.extra_files:
-                    extra.write_text(extra.read_text().replace(name, converted_name))
+            tokens = list(tokenize.generate_tokens(f.readline))
+        modified_tokens = []
+        for token in tokens:
+            if token.type == 1 and not token.string[0].isupper():
+                if (
+                    &#34;import&#34; in token.line
+                    and token.line.split()[1].strip(&#34;\n&#34;).strip(&#34;.&#34;) == token.string
+                ):
+                    modules.append(token.string)
+                    modified_tokens.append(token)
+                else:
+                    converted_token = convert_string(token.string)
+                    modified_tokens.append(token._replace(string=converted_token))
+                    for extra in args.extra_files:
+                        extra.write_text(
+                            extra.read_text().replace(token.string, converted_token)
+                        )
+            else:
+                modified_tokens.append(token)
+        content = tokenize.untokenize(modified_tokens)
         if args.lower_module_names:
             for module in modules:
                 content = content.replace(module, module.lower())
                 for extra in args.extra_files:
                     extra.write_text(extra.read_text().replace(module, module.lower()))
         if args.convert_file_name:
-            file.with_stem(convert_string(file.stem)).write_text(content)
+            converted_stem = convert_string(file.stem)
+            file.with_stem(converted_stem).write_text(content)
             file.unlink()
+            for extra in args.extra_files:
+                extra.write_text(extra.read_text().replace(file.stem, converted_stem))
         else:
             file.write_text(content)
 
 
 if __name__ == &#34;__main__&#34;:
-    main()</code></pre>
+    main(get_args())</code></pre>
 </details>
 </section>
 <section>
@@ -119,13 +143,27 @@ if __name__ == &#34;__main__&#34;:
 <span>def <span class="ident">convert_string</span></span>(<span>camel_string: str) ‑> str</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Converts a camel case string to a PEP compliant snake case string.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def convert_string(camel_string: str) -&gt; str:
-    return &#34;&#34;.join(f&#34;_{ch.lower()}&#34; if ch.isupper() else ch for ch in camel_string)</code></pre>
+    &#34;&#34;&#34;Converts a camel case string to a PEP compliant snake case string.&#34;&#34;&#34;
+    snake_string = &#34;&#34;
+    for i, ch in enumerate(camel_string):
+        if (
+            0 &lt; i &lt; (len(camel_string) - 1)
+            and ch.isupper()
+            and camel_string[i - 1].islower()
+        ):
+            if camel_string[i + 1].isupper():
+                snake_string += f&#34;_{ch}&#34;
+            else:
+                snake_string += f&#34;_{ch.lower()}&#34;
+        else:
+            snake_string += ch
+    return snake_string</code></pre>
 </details>
 </dd>
 <dt id="nocamel.nocamel.get_args"><code class="name flex">
@@ -139,7 +177,7 @@ if __name__ == &#34;__main__&#34;:
 </summary>
 <pre><code class="python">def get_args() -&gt; argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument(&#34;files_to_convert&#34;, type=str)
+    parser.add_argument(&#34;source_to_convert&#34;, type=str)
 
     parser.add_argument(
         &#34;-ef&#34;,
@@ -157,17 +195,24 @@ if __name__ == &#34;__main__&#34;:
         help=&#34;&#34;&#34; Change module import names to lower case. &#34;&#34;&#34;,
     )
 
-    parser.add_argument(&#34;-cfn&#34;, &#34;--convert_file_name&#34;, action=&#34;store_true&#34;)
+    parser.add_argument(
+        &#34;-cfn&#34;,
+        &#34;--convert_file_name&#34;,
+        action=&#34;store_true&#34;,
+        help=&#34;&#34;&#34; Convert the file name to snake case and delete the origninal. &#34;&#34;&#34;,
+    )
 
     args = parser.parse_args()
-    args.files_to_convert: Path = Path(args.files_to_convert)
+    args.source_to_convert: Path = Path(args.source_to_convert)
+    if args.source_to_convert.is_dir():
+        args.file_to_convert = args.source_to_convert.rglob(&#34;*.py&#34;)
     args.extra_files: list[Path] = [Path(file) for file in args.extra_files]
 
     return args</code></pre>
 </details>
 </dd>
 <dt id="nocamel.nocamel.main"><code class="name flex">
-<span>def <span class="ident">main</span></span>(<span>)</span>
+<span>def <span class="ident">main</span></span>(<span>args: argparse.Namespace = None)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -175,42 +220,45 @@ if __name__ == &#34;__main__&#34;:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def main():
-    args = get_args()
-    if args.files_to_convert.is_file():
-        files_to_convert: list[Path] = [args.files_to_convert]
-    else:
-        files_to_convert: list[Path] = list(args.files_to_convert.iterdir())
-    for file in files_to_convert:
+<pre><code class="python">def main(args: argparse.Namespace = None):
+    if not args:
+        args = get_args()
+    for file in args.source_to_convert:
         content = file.read_text()
         names = []
         modules = []
         with file.open(&#34;r&#34;) as f:
-            for token in tokenize.generate_tokens(f.readline):
-                if token.type == 1:
-                    if (
-                        &#34;import&#34; in token.line
-                        and token.line.split()[1].strip(&#34;\n&#34;).strip(&#34;.&#34;) == token.string
-                    ):
-                        modules.append(token.string)
-                    elif token.string not in modules:
-                        names.append(token.string)
-            names = list(set(names))
-
-        for name in names:
-            if not name[0].isupper():
-                converted_name = convert_string(name)
-                content = content.replace(name, converted_name)
-                for extra in args.extra_files:
-                    extra.write_text(extra.read_text().replace(name, converted_name))
+            tokens = list(tokenize.generate_tokens(f.readline))
+        modified_tokens = []
+        for token in tokens:
+            if token.type == 1 and not token.string[0].isupper():
+                if (
+                    &#34;import&#34; in token.line
+                    and token.line.split()[1].strip(&#34;\n&#34;).strip(&#34;.&#34;) == token.string
+                ):
+                    modules.append(token.string)
+                    modified_tokens.append(token)
+                else:
+                    converted_token = convert_string(token.string)
+                    modified_tokens.append(token._replace(string=converted_token))
+                    for extra in args.extra_files:
+                        extra.write_text(
+                            extra.read_text().replace(token.string, converted_token)
+                        )
+            else:
+                modified_tokens.append(token)
+        content = tokenize.untokenize(modified_tokens)
         if args.lower_module_names:
             for module in modules:
                 content = content.replace(module, module.lower())
                 for extra in args.extra_files:
                     extra.write_text(extra.read_text().replace(module, module.lower()))
         if args.convert_file_name:
-            file.with_stem(convert_string(file.stem)).write_text(content)
+            converted_stem = convert_string(file.stem)
+            file.with_stem(converted_stem).write_text(content)
             file.unlink()
+            for extra in args.extra_files:
+                extra.write_text(extra.read_text().replace(file.stem, converted_stem))
         else:
             file.write_text(content)</code></pre>
 </details>
