@@ -50,7 +50,7 @@ def get_args() -> argparse.Namespace:
     if not args.source_to_convert:
         args.source_to_convert = Path.cwd()
     else:
-        args.source_to_convert = Path(args.source_to_convert)
+        args.source_to_convert = Path(args.source_to_convert).absolute()
     if args.source_to_convert.is_dir():
         args.source_to_convert = list(
             args.source_to_convert.glob("**/*.py" if args.recursive else "*.py")

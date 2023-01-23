@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "nocamel"
 authors = [{name="Matt Manes"}]
 description = "Convert a python file from camel case to PEP compliant style."
-version = "1.0.0"
+version = "1.0.1"
 requires-python = ">=3.6"
 dependencies = []
 readme = "README.md"
