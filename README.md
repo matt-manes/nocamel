@@ -9,17 +9,19 @@ Camel case names that start with a capital are ignored (class names).<br>
 Usage:
 <pre>
 >nocamel -h
-usage: nocamel.py [-h] [-ef [EXTRA_FILES ...]] [-lmn] [-cfn] source_to_convert
-
-positional arguments:
-  source_to_convert
+usage: nocamel [-h] [-s SOURCE_TO_CONVERT] [-ef [EXTRA_FILES ...]] [-lmn] [-cfn] [-r]
 
 options:
   -h, --help            show this help message and exit
+  -s SOURCE_TO_CONVERT, --source_to_convert SOURCE_TO_CONVERT
+                        Source file or directory to convert. If None, all .py files in current working directory will
+                        be converted.
   -ef [EXTRA_FILES ...], --extra_files [EXTRA_FILES ...]
                         Change the names in these non .py files as well.
   -lmn, --lower_module_names
                         Change module import names to lower case.
   -cfn, --convert_file_name
                         Convert the file name to snake case and delete the origninal.
+  -r, --recursive       If -s/--source is None or a directory, convert all .py files including those in
+                        subdirectories.
 </pre>

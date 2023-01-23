@@ -21,3 +21,6 @@ if __name__ == "__main__":
     variable: str
     someClassInstance.anotherFunction(variable, variable)
     variable = "someFunction"
+    variableName = ""
+    variableNameTwo = ""
+    f"{variableName} variableName {variableName + variableNameTwo * 'variableName' / 'variableNameThree' % 'someString'}"
