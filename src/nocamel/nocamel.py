@@ -55,6 +55,8 @@ def get_args() -> argparse.Namespace:
         args.source_to_convert = list(
             args.source_to_convert.glob("**/*.py" if args.recursive else "*.py")
         )
+    else:
+        args.source_to_convert = [args.source_to_convert]
     args.extra_files: list[Path] = [Path(file) for file in args.extra_files]
 
     return args
@@ -153,7 +155,8 @@ def main(args: argparse.Namespace = None):
         if args.convert_file_name:
             converted_stem = convert_string(file.stem)
             file.with_stem(converted_stem).write_text(content)
-            file.unlink()
+            if converted_stem != file.stem:
+                file.unlink()
             for extra in args.extra_files:
                 extra.write_text(extra.read_text().replace(file.stem, converted_stem))
         else:
